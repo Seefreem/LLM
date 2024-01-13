@@ -5,7 +5,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema.runnable import RunnableLambda
 import os
 # Set api_key. 设置api_key
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 
 def length_function(text):
     return len(text)

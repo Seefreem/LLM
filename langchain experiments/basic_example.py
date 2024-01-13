@@ -5,9 +5,8 @@
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
-# api_key = "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"
 # Set api_key. 添加 api_key
-api_key = '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'
+api_key = ''
 
 prompt = ChatPromptTemplate.from_template('Tell me a joke about {topic}')
 llm = ChatOpenAI(openai_api_key = api_key)

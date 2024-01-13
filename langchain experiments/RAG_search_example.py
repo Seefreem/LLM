@@ -7,11 +7,11 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain.schema.runnable import RunnableParallel, RunnablePassthrough
 from langchain.vectorstores import DocArrayInMemorySearch # 这就是向量数据库部分，内存版本
-api_key = "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"
+api_key = ""
 
 # -------------------设置环境变量-------------------------
 import os
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 
 #### Step 1: Build a vectorstore and get the retriever
 print('Setup vector database')

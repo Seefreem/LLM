@@ -27,7 +27,7 @@ chat_prompt = ChatPromptTemplate.from_messages([
     ("system", template),
     ("human", human_template),
 ])
-api_key = "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"
+api_key = ""
 category_chain = chat_prompt | ChatOpenAI(openai_api_key=api_key) | CommaSeparatedListOutputParser()
 
 

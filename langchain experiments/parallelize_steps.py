@@ -4,7 +4,7 @@ from langchain.schema.runnable import RunnableParallel
 from langchain.schema.output_parser import StrOutputParser
 import os
 # Set api_key. 设置api_key
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 output_parser = StrOutputParser()
 model = ChatOpenAI()
 joke_chain = ChatPromptTemplate.from_template("tell me a joke about {topic}") | model | output_parser
