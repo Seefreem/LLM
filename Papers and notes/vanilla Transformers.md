@@ -1,0 +1,1 @@
+这里有个疑问是，能不能利用这个模型中的hidden representation 作为自己的SSM的训练材料？
