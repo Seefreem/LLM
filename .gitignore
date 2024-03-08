@@ -1,4 +1,8 @@
 /checkpoint*
 /adapter*
 /data*
+/fine-tuning/data
+/fine-tuning/models
+/fine-tuning/runs
+/fine-tuning/test_trainer
 /*/cache

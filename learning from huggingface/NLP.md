@@ -1,6 +1,6 @@
 # pipeline
 Pipeline 作为Huggingface的基础工具，能够很好地帮助我们直接使用huggingface上的模型。
-当我们将自己的模型装进Pipeline后，也方便我们使用Huggingface的其他功能，比如evaluator。  
+当我们将自己的模型装进Pipeline后，也方便我们使用Huggingface的其他功能，比如 evaluator 。  
 Pipeline is an abstract of the pre-process, modeling and post-process.
 
 Some of the currently available pipelines are:  
@@ -297,6 +297,7 @@ Dataset.map() 的batched 参数默认情况下的batch size 是1000. 加速方�
 
 This means that using a fast tokenizer with the batched=True option is 30 times faster than its slow counterpart with no batching — this is truly amazing! That’s the main reason why fast tokenizers are the default when using AutoTokenizer (and why they are called “fast”).
 关于tokenization的加速问题：首先是设置 batched=True，然后是使用 fast Tokenizer，但是并不是所有的tokenizer都有fast版本
+如果 batched=True 则传递给回调函数的值是一个子表，也就是每个属性下的元素类型是list。
 
 ```python
 slow_tokenizer = AutoTokenizer.from_pretrained("bert-base-cased", use_fast=False)
