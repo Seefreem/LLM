@@ -393,8 +393,18 @@ Datasets called a FAISS index. FAISS (short for Facebook AI Similarity Search) i
 
 # Tokenizer
 
+# Evaluation
+注意用于训练的 loss function 和evaluation 函数是不一样的。
+并且交叉熵可以用于多分类任务。自然语言处理中预测下一个token就是多分类任务。
+https://zhuanlan.zhihu.com/p/56638625
 
 
+# Metrics
+宏平均（Marco Averaged）:
+对所有类别的每一个统计指标值的算数平均值，分别称为宏精确率（Macro-Precision） ，宏召回率（Macro-Recall），宏F值（Macro-F Score）
+
+macro ˈmækrəʊ
+1. [ADJ]You use macro to indicate that something relates to a general area, rather than being detailed or specific. 宏观的
 
 
 
