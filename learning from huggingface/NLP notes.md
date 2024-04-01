@@ -401,6 +401,199 @@ https://zhuanlan.zhihu.com/p/56638625
 
 
 # Metrics
+需要注意的是，Metrics的输入是文本，并且是衡量模型的输出的性能的。而不是损失函数。  
+注意其中的 Perplexity 是直接使用目标token的概率来进行衡量的。这也不是损失函数。 
+https://blog.csdn.net/codename_cys/article/details/108654792
+
+## ppl (perplexity)
+马尔可夫假设。用每个单词被预测的概率来计算文本的连贯程度。 
+
+## bleu (bilingual evaluation understudy)
+核心思想都是比较生成文本与参考文本间的字符串重合度。  
+这个指标是基于 n-gram 的。 
+衡量的是生成的文本“击中”参考文本的概率。  
+
+## rouge 
+这也是基于n-gram 的。只是衡量的内容不一样。  
+衡量的是参考文本“击中”生成文本的概率。  
+
+## bleurt
+这种方法比较 fancy，它通过一个模型来对生成文本和参考文本进行评估，计算文本之间的距离。  
+
+# Huggingface Metrics
+
+https://huggingface.co/docs/datasets/en/how_to_metrics
+这两个文章讲解了怎么加载 metrics，怎么下载metrics，以及怎么定义和加载自己的metrics。  
+并且这里指定了一个使用 metrics 的接口：
+```python
+import datasets
+metric = datasets.load_metric('my_metric')
+for model_input, gold_references in evaluation_dataset:
+    model_predictions = model(model_inputs)
+    metric.add_batch(predictions=model_predictions, references=gold_references)
+final_score = metric.compute()
+```
+接口是：直接将模型的输出 和 数据中的 label 输入给 metric，至于怎么计算，以及需要什么样的后处理，都交给metric 自己完成。  
+而在Huggingface中 模型的输出 默认是 logits。  
+`那么现在就是需要确定，predictions and references 长什么样。 需要看例子。`  
+
+
+从这个文章来看，其实 metrics 的计算方法需要两个输入参数 predictions and references。  
+其实并没有规定是 logits 还是 text。  
+所以可能还是比较灵活。  
+但是默认情况下可能还是比较 predictions 还是 logits。 但是references 就不确定了。因为不同的任务的label 不一样。  
+
+## Inputs of metrics
+text, logits, dictionary, numerics, etc.
+
+## Choosing a metric for your task
+https://huggingface.co/docs/evaluate/en/choosing_a_metric
+metrics 的来源主要有三种：
+1. 一般的accuracy、precision、recall等。
+2. 数据集自定义的 metrics，那么这就需要看数据集的源码。
+3. 任务自定义的metrics，这就需要看其对应的定义和源码了。
+
+## Metrics
+从几个 metrics 的源码来看，不同的metrics接受的输入不同。有些是 text，有些是字典。  
+并且metrics中会有一些数据预处理的代码。  
+
+那么Huggingface 提供的 meteics呢？  
+huggingface上的模型的输出都是包含在一个输出类型中的，这个类型是根据不同的任务而不同，但是都是字典。  
+并且一般来说，模型的直接输出都是logits（包含在 返回类型中）  
+
+Metrics的使用方式很多。可以放在 Trainer中使用。可以放在 evaluator中使用。也可以拿到模型的输出之后，单独使用。它就是一个函数，随便你在哪里调用。
+
+并且metric的使用往往是和 Evaluator 结合起来的：  
+https://huggingface.co/docs/evaluate/en/base_evaluator
+
+总结：  
+关于 metrics 的使用方法： 三种使用方法。但是如果要放在Trainer中自动调用的话，往往需要进行 wrapping。  
+huggingface 内部默认的调用方法是直接将模型输出和数据集中的label直接输入给metrics函数：  
+```python
+for model_input, gold_references in evaluation_dataset:
+    model_predictions = model(model_inputs)
+    metric.add_batch(predictions=model_predictions, references=gold_references)
+    final_score = metric.compute()
+``` 
+但是注意，在 Trainer 中，并不是直接将模型的输出输入给 metrics的。 而是将模型的输出中的 logits拿出来，加上从数据中提取的labels，一起输入给metrics。
+
+也就是说，可能在不同的地方，默认的规则不一样。需要看源码确定。  
+或者另一个简单的办法是，自己写一个metrics函数，然后在这个函数中打印输入参数。然后就知道应该怎么处理了。  
+
+### Accuracy
+https://huggingface.co/spaces/evaluate-metric/accuracy 
+```python
+>>> accuracy_metric = evaluate.load("accuracy")
+>>> results = accuracy_metric.compute(references=[0, 1, 2, 0, 1, 2], predictions=[0, 1, 1, 2, 1, 0])
+>>> print(results)
+{'accuracy': 0.5}
+```
+这是准确率的用法。但是我们知道模型的输出并不是这种格式的。并且有时候得到的是文本。而不是数字。  
+这时候就需要进行预处理。或者对文本进行数字化，比如tokenization 或者直接比较字符串。就和 accuracy 本身的代码一样，直接比较值。  
+
+实际案例：
+```python
+import evaluate
+metric = evaluate.load("accuracy")
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    return metric.compute(predictions=predictions, references=labels)
+```
+在这里我们对 accuracy 进行了包装。因为一般来说模型的输出是 logits，或者包含了 logits的 字典。  
+这里的预处理是对logits 进行 greedy selection。获得标签。  
+
+### Perplexity
+https://huggingface.co/spaces/evaluate-metric/perplexity
+它这里提供的例子很奇怪。  
+metric 在使用时需要指定 model_id，但是并没有说支持传入模型对象。  
+那么就意味着，你要是想测试自己的模型，你就要需要替换成自己的模型的名字。或者将自己的模型传到huggingface上。  
+并且鉴于这种自己加载模型的设定。它不适用于Trainer。 
+
+### Rouge
+https://huggingface.co/spaces/evaluate-metric/rouge
+```python
+>>> rouge = evaluate.load('rouge')
+>>> predictions = ["hello there", "general kenobi"]
+>>> references = ["hello there", "general kenobi"]
+>>> results = rouge.compute(predictions=predictions,
+...                         references=references)
+>>> print(results)
+{'rouge1': 1.0, 'rouge2': 1.0, 'rougeL': 1.0, 'rougeLsum': 1.0}
+```
+可以看到这里的输入也是text。  
+
+
+### GLUE
+https://github.com/huggingface/datasets/blob/main/metrics/glue/glue.py
+从 GLUE 的源码来看，其实对于 accuracy 之类的 metrics， 它们的实现还是很简单暴力的。  
+
+huggingface example:
+https://huggingface.co/spaces/evaluate-metric/bleu
+```python
+>>> predictions = ["hello there general kenobi","foo bar foobar"]
+>>> references = [
+...     ["hello there general kenobi"],
+...     ["foo bar foobar"]
+... ]
+>>> bleu = evaluate.load("bleu")
+>>> results = bleu.compute(predictions=predictions, references=references)
+>>> print(results)
+{'bleu': 1.0, 'precisions': [1.0, 1.0, 1.0, 1.0], 'brevity_penalty': 1.0, 'length_ratio': 1.0, 'translation_length': 7, 'reference_leng}
+# results = bleu.compute(predictions=predictions, references=references, tokenizer=word_tokenize)
+
+```
+可以看到在huggingface中它的输入也还是text。还可以将 tokenizer 传给 metric。
+
+
+###  SacreBLEU metric
+https://huggingface.co/spaces/evaluate-metric/sacrebleu
+这里给出了一个例子：
+```python
+>>> predictions = ["hello there general kenobi", "foo bar foobar"]
+>>> references = [["hello there general kenobi", "hello there !"],
+...                 ["foo bar foobar", "foo bar foobar"]]
+>>> sacrebleu = evaluate.load("sacrebleu")
+>>> results = sacrebleu.compute(predictions=predictions, 
+...                             references=references)
+>>> print(list(results.keys()))
+['score', 'counts', 'totals', 'precisions', 'bp', 'sys_len', 'ref_len']
+>>> print(round(results["score"], 1))
+100.0
+```
+注意，这里 metric 的输入是text。但是在解释中，他又说的是：‘predictions (list of str): list of translations to score. Each translation should be tokenized into a list of tokens.’
+也就是ids。 但这也不是模型的logits。  
+
+
+### SQuAD metric
+https://github.com/huggingface/datasets/blob/main/metrics/squad/squad.py
+这里提供了一个参考例子。  
+```python
+>>> predictions = [{'prediction_text': '1976', 'id': '56e10a3be3433e1400422b22'}]
+>>> references = [{'answers': {'answer_start': [97], 'text': ['1976']}, 'id': '56e10a3be3433e1400422b22'}]
+>>> squad_metric = datasets.load_metric("squad")
+>>> results = squad_metric.compute(predictions=predictions, references=references)
+>>> print(results)
+{'exact_match': 100.0, 'f1': 100.0}
+```
+在这个例子中，metric的输入竟然又是 字典。 这个很符合 huggingface model 的输出。  
+同时可以看到的是，在metric 里面，对输入的字典进行了解析。然后才是计算。  
+
+
+### BLEURT metric
+https://github.com/huggingface/datasets/blob/main/metrics/bleurt/bleurt.py
+
+```python
+>>> predictions = ["hello there", "general kenobi"]
+>>> references = ["hello there", "general kenobi"]
+>>> bleurt = datasets.load_metric("bleurt")
+>>> results = bleurt.compute(predictions=predictions, references=references)
+>>> print([round(v, 2) for v in results["scores"]])
+[1.03, 1.04]
+```
+在这个例子中，metric 接受的输入是text。  
+
+
 宏平均（Marco Averaged）:
 对所有类别的每一个统计指标值的算数平均值，分别称为宏精确率（Macro-Precision） ，宏召回率（Macro-Recall），宏F值（Macro-F Score）
 

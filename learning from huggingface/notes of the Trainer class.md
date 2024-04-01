@@ -1,6 +1,8 @@
+![trainer call graph](trainer_call_graph.png)
 
 
 # Train()
+Input dataset should be tokenized before using.  
 注意Trainer拿到的训练数据是 数值类型，而不是文本类型。所以在定义trainer之前，得先将文本 tokenized。 
 这个函数是训练模型的接口，里面也会进行模型评估。  
 其调用了 _inner_training_loop() 函数。
@@ -12,13 +14,15 @@
 然后调用了用户自定义的 metric函数。
 
 ## _inner_training_loop()
+_inner_training_loop() is the main loop of training.   
+training_step() is a single training step.  
+During training, _maybe_log_save_evaluate() will be called to evaluate the model.  
 这个函数是实质上进行训练的函数。  
 这个函数实现的训练的过程，并且调用了评估的函数 _maybe_log_save_evaluate()。
 单次训练被封装到 training_step()中。  
 数据则是通过 get_train_dataloader() 进行封装的。  
 
 ## training_step()
-
 Perform a training step on a batch of inputs.  
 Return: `torch.Tensor`: The tensor with training loss on this batch.
 这个函数执行一次训练。并且返回在这个batch上的损失值。  
@@ -47,6 +51,7 @@ Returns the training [`~torch.utils.data.DataLoader`].
 函数。这两个函数删掉了部分columns。  
 
 ## _remove_unused_columns()
+This function will delete columns from input dataset. Only columns defined in model.forward() and in Trainer.label_names will be preserved.   
 根据模型 forward() 函数的参数表，删除无用的 clomuns。  
 除此之外，["label", "label_ids"] + self.label_names 等列也会被保留下来。  
 
@@ -56,6 +61,7 @@ Returns the training [`~torch.utils.data.DataLoader`].
 并且这个函数里面集成了 sampler，这样输入的数据就不必是打乱的了。  
 
 # _maybe_log_save_evaluate()
+_maybe_log_save_evaluate() will be called to evaluate the model.  
 会调用 evaluate() 函数进行模型评估。  
 总的来说，在evaluation阶段，模型会输出 loss 和 logits。 然后能从输入中直接获得 labels。  
 其中 loss 和 logits 来自模型的输出。 loss 会作为返回值被返回。  
@@ -90,7 +96,7 @@ all_labels 和 all_preds 类似，包含的是 prediction_step （模型）输�
 
 
 ## prediction_step()
-Perform an evaluation step on `model` using `inputs`.  
+Perform an prediction step on `model` using `inputs`.  
 
 Inputs: The dictionary will be unpacked before being fed to the model. Most models expect the targets under the argument `labels`. Check your model's documentation for all accepted arguments.
 
